@@ -19,9 +19,13 @@ class Play extends Phaser.Scene {
         this.p1Rocket = new Rocket(this, game.config.width/2, game.config.height - borderUISize - borderPadding, 'rocket').setOrigin(0.5, 0)
         
         //add 3x spaceships
-        this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 'spaceship', 0, 30).setOrigin(0, 0)
-        this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 'spaceship', 0, 20).setOrigin(0,0)
-        this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 'spaceship', 0, 10).setOrigin(0,0)
+        this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 'spaceships1', 0, 30).setOrigin(0, 0)
+        this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 'spaceships1', 0, 20).setOrigin(0,0)
+        this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 'spaceships1', 0, 10).setOrigin(0,0)
+
+        this.ship01.play('fly');
+        this.ship02.play('fly');
+        this.ship03.play('fly');
 
         // add Fat ship
 
@@ -32,14 +36,30 @@ class Play extends Phaser.Scene {
         keyRESET = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R)
         keyLEFT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
         keyRIGHT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT)
+        
+        // particle system
+
+        this.emitter = this.add.particles(0, 0, 'fire', {
+            frame: ['red'],
+            lifespan: 4000,
+            speed: {
+                min: 0, max: 50
+            },
+            scale: {
+                start: 3,
+                end: 0
+            },
+
+            emitting: false
+        });
 
         // initialize score
         this.p1Score = 0
         // display score
         let scoreConfig = {
-            fontFamily: 'Courier',
+            fontFamily: 'Arial',
             fontSize: '28px',
-            backgroundColor: '#F3B141',
+            backgroundColor: '#33BDFF',
             color: '#843605',
             align: 'right',
             padding: {
@@ -59,10 +79,24 @@ class Play extends Phaser.Scene {
             this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or < for Menu', scoreConfig).setOrigin(0.5)
             this.gameOver = true
         }, null, this)
+        
 
+      //  this.initialTime = 60
+       // this.timertext = this.add.text(32,32);
+
+        // timer stuff
+        this.timer = this.time.addEvent({
+            delay: game.settings.gameTimer,
+            paused: false
+        });
+        this.timetext = this.add.text(32,30)
     }
 
+
     update() {
+        // timer
+        this.timetext.setText(`Time: ${this.timer.getRemainingSeconds().toFixed(1)}`);
+        //this.timertext.setText(`Time: ${this.clock.getProgress().toString().substr(0,4)}`);
         // check key input for restart
         if(this.gameOver && Phaser.Input.Keyboard.JustDown(keyRESET)) {
             this.scene.restart()
@@ -75,31 +109,36 @@ class Play extends Phaser.Scene {
 
         this.p1Rocket.update()
 
-        this.ship01.update()               // update spaceships (x3)
+        this.ship01.update()               // update spaceships (x4)
         this.ship02.update()
         this.ship03.update()
         this.fatship.update()
+        
 
         // check collisions
         if(this.checkCollision(this.p1Rocket, this.ship03)) {
             this.p1Rocket.reset()
             this.shipExplode(this.ship03)
+            this.party(this.ship03)
 
         }
         if (this.checkCollision(this.p1Rocket, this.ship02)) {
             this.p1Rocket.reset()
             this.shipExplode(this.ship02)
+            this.party(this.ship02)
 
         }
         if (this.checkCollision(this.p1Rocket, this.ship01)) {
             this.p1Rocket.reset()
             this.shipExplode(this.ship01)
+            this.party(this.ship01)
 
         }
 
         if (this.checkFatCollision(this.p1Rocket, this.fatship)) {
             this.p1Rocket.reset()
             this.fatshipExplode(this.fatship)
+            this.fatparty(this.fatship)
 
         }
 
@@ -124,6 +163,7 @@ class Play extends Phaser.Scene {
         }
     }
 
+
     checkFatCollision(rocket, fatship) {
         // simple AABB checking
         if (rocket.x < fatship.x + fatship.width && 
@@ -147,11 +187,22 @@ class Play extends Phaser.Scene {
           ship.alpha = 1                     // make ship visible again
           boom.destroy()                     // remove explosion sprite
         })
+
         // score add and text update
         this.p1Score += ship.points
         this.scoreLeft.text = this.p1Score
         this.sound.play('sfx-explosion')       
     }
+
+    // ship particles
+    party(ship) {
+        this.emitter.explode(40, ship.x, ship.y)
+    }
+
+    fatparty(fatship) {
+        this.emitter.explode(200, fatship.x, fatship.y)
+    }
+
 
     fatshipExplode(fatship) {
         // temporarily hide ship
