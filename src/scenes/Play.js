@@ -3,6 +3,7 @@ class Play extends Phaser.Scene {
         super("playScene")
     }
 
+
     create() {
         // place tile sprite
         this.starfield = this.add.tileSprite(0, 0, 640, 480, 'starfield').setOrigin(0,0)
@@ -21,6 +22,10 @@ class Play extends Phaser.Scene {
         this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 'spaceship', 0, 30).setOrigin(0, 0)
         this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 'spaceship', 0, 20).setOrigin(0,0)
         this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 'spaceship', 0, 10).setOrigin(0,0)
+
+        // add Fat ship
+
+        this.fatship = new Fat(this, game.config.width + borderUISize*3, borderUISize*4 + borderPadding*2, 'fat', 0, 40).setOrigin(0,0)
 
         // define keys
         keyFIRE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F)
@@ -54,6 +59,7 @@ class Play extends Phaser.Scene {
             this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or < for Menu', scoreConfig).setOrigin(0.5)
             this.gameOver = true
         }, null, this)
+
     }
 
     update() {
@@ -72,24 +78,37 @@ class Play extends Phaser.Scene {
         this.ship01.update()               // update spaceships (x3)
         this.ship02.update()
         this.ship03.update()
+        this.fatship.update()
+
         // check collisions
         if(this.checkCollision(this.p1Rocket, this.ship03)) {
             this.p1Rocket.reset()
-            this.shipExplode(this.ship03)   
+            this.shipExplode(this.ship03)
+
         }
         if (this.checkCollision(this.p1Rocket, this.ship02)) {
             this.p1Rocket.reset()
             this.shipExplode(this.ship02)
+
         }
         if (this.checkCollision(this.p1Rocket, this.ship01)) {
             this.p1Rocket.reset()
             this.shipExplode(this.ship01)
+
         }
+
+        if (this.checkFatCollision(this.p1Rocket, this.fatship)) {
+            this.p1Rocket.reset()
+            this.fatshipExplode(this.fatship)
+
+        }
+
         if(!this.gameOver) {               
             this.p1Rocket.update()         // update rocket sprite
             this.ship01.update()           // update spaceships (x3)
             this.ship02.update()
             this.ship03.update()
+            this.fatship.update()
         } 
     }
 
@@ -99,6 +118,18 @@ class Play extends Phaser.Scene {
           rocket.x + rocket.width > ship.x && 
           rocket.y < ship.y + ship.height &&
           rocket.height + rocket.y > ship. y) {
+          return true
+        } else {
+          return false
+        }
+    }
+
+    checkFatCollision(rocket, fatship) {
+        // simple AABB checking
+        if (rocket.x < fatship.x + fatship.width && 
+          rocket.x + rocket.width > fatship.x && 
+          rocket.y < fatship.y + fatship.height &&
+          rocket.height + rocket.y > fatship. y) {
           return true
         } else {
           return false
@@ -118,6 +149,24 @@ class Play extends Phaser.Scene {
         })
         // score add and text update
         this.p1Score += ship.points
+        this.scoreLeft.text = this.p1Score
+        this.sound.play('sfx-explosion')       
+    }
+
+    fatshipExplode(fatship) {
+        // temporarily hide ship
+        fatship.alpha = 0                         
+        // create explosion sprite at ship's position
+        let boom = this.add.sprite(fatship.x, fatship.y, 'explosion').setOrigin(0, 0)
+        boom.anims.play('explode')           // play explode animation
+        boom.on('animationcomplete', () => { // callback after ani completes
+          fatship.reset()                       // reset ship position
+          fatship.alpha = 1                     // make ship visible again
+          boom.destroy()                     // remove explosion sprite
+        })
+
+        // score add and text update
+        this.p1Score += fatship.points
         this.scoreLeft.text = this.p1Score
         this.sound.play('sfx-explosion')       
     }
